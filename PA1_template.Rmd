@@ -50,7 +50,7 @@ time
 We have the table and the graph, now we want to see which interval has the maximum number of steps
 
 ```{r}
-maxnum<-interval %>% filter(avg_steps_interval==max(avg_steps_interval)) %>% select(interval)
+maxnum<-daily_active %>% filter(Average_Steps==max(Average_Steps)) %>% select(interval)
 maxnum$interval[1]
 
 ```
@@ -68,8 +68,8 @@ fulldata$date<- as.Date(fulldata$date)
 for (ind in 1:nrow(fulldata)) {
   if (is.na(fulldata$steps[ind])){
       x=fulldata$interval[ind]
-      y=which(interval$interval==x)
-      fulldata$steps[ind]<-interval$avg_steps_interval[y]
+      y=which(daily_active$interval==x)
+      fulldata$steps[ind]<-daily_active$Average_Steps[y]
   }
 }
 
@@ -88,7 +88,7 @@ sum(is.na(fulldata))
 ```{r}
 new_dailysmm<- fulldata %>% group_by(date) %>% summarize(stepmean= mean(steps, na.rm=TRUE), stepmedian=median(steps, ma.rm=TRUE), dailysteps=sum(steps, na.rm=TRUE))
 new_time<- ggplot(new_dailysmm, aes(date, stepmean, group=1)) + geom_line()+
-  xlab("Date") +ylab("Step Mean") +title("Time Series Plot of the Average Number of Steps Taken")
+  xlab("Date") +ylab("Step Mean")
 new_time
 
 ```
@@ -137,7 +137,7 @@ ggplot(fulldata, aes(interval, steps, group=day_week)) + geom_point()+
 This graph just takes a look at each individual point. But the next graph will take the average from each interval point and see how those averages differ on weekends and weekdays.
 
 First we create a chart to summarize the information we want, and then we graph that chart
-```{r}
+```{r Graphing Steps and Interval by Weekday and Weekend}
 ww<- fulldata %>% group_by(day_week, interval) %>% summarize(Step_average=mean(steps))
 ww
 ggplot(ww, aes(interval, Step_average, group=day_week))+
