@@ -1,0 +1,48 @@
+library(dplyr)
+library(ggplot2)
+options(scipen=10000)
+storm<- read.csv("~/Downloads/repdata_data_StormData.csv")
+
+type<- storm %>% group_by(EVTYPE) %>% summarize(N=n(), Total_Fatalities= sum(FATALITIES, na.rm=TRUE), Total_Injuries=sum(INJURIES, na.rm=TRUE)) %>% arrange(desc(N))
+
+type_num<- type %>% filter(Total_Fatalities>0 & Total_Injuries>0) %>% arrange(desc(N))
+
+mfe=10000
+frequent_events<- type_num %>% filter(N>mfe) %>% arrange(desc(N))
+frequent_events %>% ggplot() + geom_col(aes(reorder(EVTYPE, -N), N, fill="seaborn blue", label=N))+coord_flip()+xlab("Event Name")+ylab("Frequency")+ggtitle("Top 12 Most Frequent Storms")
+
+mf<-200
+most_fatal<- type %>% arrange(desc(Total_Fatalities)) %>% filter(Total_Fatalities>mf)
+most_fatal %>% ggplot() + 
+  geom_col(aes(reorder(EVTYPE, -Total_Fatalities), Total_Fatalities), fill="green")+coord_flip()+
+  xlab("Event Type")+ylab("Number of Fatalities") + ggtitle("Top 12 Most Fatal Storms")
+  
+mi=1000
+most_injuries<- type %>% filter(Total_Injuries>mi)
+most_injuries %>% ggplot() + 
+  geom_col(aes(reorder(EVTYPE, -Total_Injuries),Total_Injuries), fill="blue") + coord_flip()+
+  xlab("Number of Injuries") + ylab("Event Type")+ggtitle("Top 14 Storms with Leading Cases of Injuries")
+  
+both<- type %>% mutate(Total_Both=Total_Fatalities+Total_Injuries) %>% arrange(desc(Total_Both)) %>% filter(Total_Both>1500)
+both
+
+tornados<- storm %>% filter(EVTYPE=="TORNADO") %>% group_by(STATE) %>% summarize(N=n()) %>% arrange(desc(N)) %>% filter(N>1000)
+tornados
+
+##ECONOMIC
+econ<- storm %>% select(EVTYPE, PROPDMG, CROPDMG) %>% group_by(EVTYPE)%>% summarize(N=n(), Property_Damage=sum(PROPDMG), Crop_Damage=sum(CROPDMG)) %>% filter( Property_Damage>0 & Crop_Damage>0) %>% arrange(desc(N))
+top_econ<- econ[1:12,]
+top_econ %>% ggplot() + geom_col(aes(reorder(EVTYPE,-N), N, fill="cyan")) +
+  coord_flip()+
+  xlab("Storm")+ylab("Frequency")+ggtitle("Leading Storms Causing of Economic Consequences")+ theme(plot.title=element_text(hjust=1))
+
+most_property<- econ %>% arrange(desc(Property_Damage)) %>% filter(Property_Damage>50000)
+most_property %>% ggplot() +
+geom_col(aes(reorder(EVTYPE,-Property_Damage), Property_Damage, fill="purple"))+
+coord_flip()+ xlab("Storm Type") + ylab("Amount of Property Damage") + ggtitle("Storms Causing the Most Property Damage")
+
+most_crop<- econ %>% arrange(desc(Crop_Damage)) %>% filter(Crop_Damage>10000)
+most_crop %>% ggplot() + geom_col(aes(reorder(EVTYPE, -Crop_Damage), Crop_Damage, fill="red")) + coord_flip() + xlab("Storm Type") +
+  ylab("Amount of Crop Damage") + ggtitle("Storms Causing the Most Crop Damage")
+  
+  
