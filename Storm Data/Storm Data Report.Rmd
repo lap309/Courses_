@@ -1,0 +1,72 @@
+---
+title: "Storms that Cause the Most Harm to Population Health and the Economy"
+author: "Liana Principe"
+date: "9/25/2020"
+output:
+  html_document:
+    df_print: paged
+---
+Storms that Cause the Most Harm to Population Health and the Economy
+
+##Synopsis
+This report reviews the storm data collected from 1950 to 2011, highlighting which particular storms have caused the most damage to the population's health and to the economy. The analysis measures the recorded costs and reports of fatalities, injuries, or damage to property and crops. Through the use of R, the results show which storms are hazardous in different respects, and gives a total record of the causalities they caused over the last 60 years.Figures and graphs are included to show the scope of the effect that the storms can have on our livelihood.
+
+```{r setup, reslts="hide"}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Data Processing
+To being, the first thing is to upload the necessary packages needed to analyze the data, set up the studio preferences, and read in the data. The data is read into the system under the title "storm". 
+```{r Upload, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+options(scipen=10000)
+storm<- read.csv("~/Downloads/repdata_data_StormData.csv")
+```
+The records have a lot of data from the past years so it is best to clean the data to make it easier to read and understand the information. 
+
+To address the effect on public health, the data was structured by measuring the number of fatalities and injuries that were caused by each storm over the time period of the records, as well as how many times that storm occurred.
+Once the data is cleaner, the analysis is filtered to specifically focus on the storms that have had at least one fatality and at least one injury.
+
+```{r pressure,}
+type<- storm %>% group_by(EVTYPE) %>% summarize(N=n(), Total_Fatalities= sum(FATALITIES, na.rm=TRUE), Total_Injuries=sum(INJURIES, na.rm=TRUE)) %>% arrange(desc(N))
+
+type_num<- type %>% filter(Total_Fatalities>0 & Total_Injuries>0) %>% arrange(desc(N))
+
+```
+
+To find the storms that cause the most harm to the population, the dataset was filtered to find the storms with the most combined fatalities and injuries.
+
+```{r Population Health}
+both<- type %>% mutate(Total_Both=Total_Fatalities+Total_Injuries) %>% arrange(desc(Total_Both)) %>% filter(Total_Both>1500)
+
+both %>% ggplot() + 
+  geom_col(aes(reorder(EVTYPE, -Total_Both), Total_Both), fill="green")+coord_flip()+
+  xlab("Event Type")+ylab("Number of Health Causalties") + ggtitle("Most Harmful Storms to Population Health") + theme_classic()
+```
+This graph shows the top 10 storms that have caused the most damage to population health over the last 50 years. The storms are listed on the left and each bar shows how many combined fatalities and injuries the storm has caused in all of the data.
+Specifically, the graph shows that Tornados are the leading cause of population health followed by Excessive Heat, and TSTM Wind as the third leading storm.
+
+
+For our second issue of economics causilties, we scraped the data to find all of the information about property and crop damage. The  dataset for econcomic causilties combines the total damage caused that has negatievly impacted our economy.
+
+```{r Economic Consequences}
+econ<- storm %>% select(EVTYPE, PROPDMG, CROPDMG) %>% group_by(EVTYPE)%>% summarize(N=n(), Property_Damage=sum(PROPDMG), Crop_Damage=sum(CROPDMG)) %>% filter( Property_Damage>0 & Crop_Damage>0) %>% arrange(desc(N))
+top_econ<- econ[1:12,]
+top_econ %>% ggplot() + geom_col(aes(reorder(EVTYPE,-N), N, fill="cyan")) +
+  coord_flip()+
+  xlab("Storm")+ylab("Property and Crop Damage")+ggtitle("Leading Storms Causing of Economic Consequences")+ theme(plot.title=element_text(hjust=1))
+```
+
+This plot graphs the top 12 storms that have caused the most causalities to our economy by looking at the damage to propoerty and crops. Similary, the graph places the storms on the left with the bars representing the total amount of property and crop damage. The graph shows that Hail, TSTM Wind, and Thunderstorm Wind cause the most damage, with all storms being in the wind category. 
+
+##Results
+From the analysis and looking at public health and economic causalities, the data from storms collected over the years has shown which storms the public should be most wary to.
+
+```{r}
+v<- c("EXCESSIVE HEAT", "FLASH FLOOD", "FLOOD", "HAIL", "HEAT", "HEAVY RAIN", "HEAVY SNOW", "HIGH WIND", "ICE STORM", "LIGHTNING"," THUNDERSTORM WIND", "THUNDERSTORM WINDS", "TORNADO", "TSTM WIND", "WINTER STORM")
+results<- storm %>% filter(EVTYPE %in% v) %>% group_by(EVTYPE) %>% summarize(N=n(), Total_Fatalities= sum(FATALITIES, na.rm=TRUE), Total_Injuries=sum(INJURIES, na.rm=TRUE), Property_Damage=sum(PROPDMG), Crop_Damage=sum(CROPDMG)) %>% arrange(desc(N))
+results
+```
+The figure above is a list of the top dangerouse storms for public health and for the economy, taken from the two graphs previously. 
+In this table, the data shows the name of the storm, how often that type of storm occurred, total fatalities, total injuries, total property damage, and the total crop damage recorded over the timeline of the original data.
+
