@@ -1,0 +1,100 @@
+---
+title: "Prediction Assignment"
+author: "Liana Principe"
+date: "11/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is the dataset and model to predict the class or manner in which participants performed exercise sets. It will take the data and determine how well the exercise was performed, categorizing it in levels A-E.
+Here is a link to a Github version: https://github.com/lap309/Machine-Learning
+
+
+First you need to load in the data and the necessary packages.
+```{r cars, results="hide"}
+library(caret)
+library(dplyr)
+library(e1071)
+library(randomForest)
+train<-read.csv("~/Downloads/pml-training.csv")
+final_test<-read.csv("~/Downloads/pml-testing.csv")
+```
+
+We want to determine the quality of the exercise performed. The labels are in the classe variable and are leveled A-E, so we need to run a classification model.
+Next we want to split up our data into training and testing samples.
+```{r}
+train$classe<-as.factor(train$classe)
+in_train<-createDataPartition(y=train$classe, p=.70, list=FALSE)
+training<-train[in_train, ]
+testing<-train[-in_train, ]
+NSV<-nearZeroVar(training, saveMetrics=TRUE)
+```
+We partition our training data into a testing and a training set. The code is set up so that 70% of the data is going to be used to train the model, and the other 30% of the data will be used to test the accuracy of our model.
+With this dataset, we run a nearZeroVar function so we can remove the variables in the data that have little variability and will likely not be useful in the model. 
+```{r}
+myNZVvars <- names(training) %in% c("new_window", "kurtosis_roll_belt", "kurtosis_picth_belt",
+"kurtosis_yaw_belt", "skewness_roll_belt", "skewness_roll_belt.1", "skewness_yaw_belt",
+"max_yaw_belt", "min_yaw_belt", "amplitude_yaw_belt", "avg_roll_arm", "stddev_roll_arm",
+"var_roll_arm", "avg_pitch_arm", "stddev_pitch_arm", "var_pitch_arm", "avg_yaw_arm",
+"stddev_yaw_arm", "var_yaw_arm", "kurtosis_roll_arm", "kurtosis_picth_arm",
+"kurtosis_yaw_arm", "skewness_roll_arm", "skewness_pitch_arm", "skewness_yaw_arm",
+"max_roll_arm", "min_roll_arm", "min_pitch_arm", "amplitude_roll_arm", "amplitude_pitch_arm",
+"kurtosis_roll_dumbbell", "kurtosis_picth_dumbbell", "kurtosis_yaw_dumbbell", "skewness_roll_dumbbell",
+"skewness_pitch_dumbbell", "skewness_yaw_dumbbell", "max_yaw_dumbbell", "min_yaw_dumbbell",
+"amplitude_yaw_dumbbell", "kurtosis_roll_forearm", "kurtosis_picth_forearm", "kurtosis_yaw_forearm",
+"skewness_roll_forearm", "skewness_pitch_forearm", "skewness_yaw_forearm", "max_roll_forearm",
+"max_yaw_forearm", "min_roll_forearm", "min_yaw_forearm", "amplitude_roll_forearm",
+"amplitude_yaw_forearm", "avg_roll_forearm", "stddev_roll_forearm", "var_roll_forearm",
+"avg_pitch_forearm", "stddev_pitch_forearm", "var_pitch_forearm", "avg_yaw_forearm",
+"stddev_yaw_forearm", "var_yaw_forearm")
+ctraining <- training[!myNZVvars]
+#To check the new N?? of observations
+dim(ctraining)
+```
+
+After removing certain variables, we see that our dataset has been reduced from 160 columns to 100 columns. To further clean up the data we also want to remove the variables or columns that have a lot of NA values. The code below remove columns where the number of NA values exceeds 60% of the data. Having too many NA values is will negatively impact the accuracy and predictability of the model. So the data is cleaned of excessive NA values.
+Additionally, all of this cleaning that we have performed on the training data, we must also perform on the testing data.
+
+```{r pressure}
+ctraining<-ctraining[,which(colMeans(!is.na(ctraining))>.6)]
+ctraining<- ctraining[,-2]
+ctraining<-ctraining[,-4]
+dim(ctraining)
+clean<-colnames(ctraining)
+testing<-testing[clean]
+```
+With the code above, the training and testing data have the same variables in the dataset.
+For data quality, we make sure that the class of all the variables is the same. 
+```{r}
+for (i in 1:length(testing) ) {
+        for(j in 1:length(ctraining)) {
+        if( length( grep(names(ctraining[i]), names(testing)[j]) ) ==1)  {
+            class(testing[j]) <- class(ctraining[i])
+        }      
+    }      
+}
+```
+From here it is clear that our predicted value or our y_value is categorical (non-numeric), so we will want to run a classification model. 
+The first model we will create is a Decision Tree. This is a good model for classification because it will show you the different qualitifations for assigning observations to the respective level.
+
+```{r}
+modfit<- train(classe~., method="rpart", data=ctraining)
+modfit
+```
+ The results show that the best model had an accuracy rating in the high 70s with a complexity parameter around .24 and a kappa around .70. The accuracy is decently high, but not accurate enough for what we are looking for.
+Another model we can apply to this data is a random forest model. 
+
+```{r}
+modf2<-randomForest(classe~., data=ctraining)
+modf2
+```
+Form the random forest model, we see a more accurate classification model. We see a 0% error rate so far.
+The next thing is to take this model and use it to predict the classe of the workout using all the other data in our dataset. And then we will compare our predictions to the actual values using a confusion matrix.
+```{r}
+pred<- predict(modf2, testing, type="class")
+confusionMatrix(pred, testing$classe)
+```
+The results show a model with very high predictability power. The code above took the real values from our original dataset, and compared to the values that were predicted from our model. As we can see here, there were no errors produced from our model. The reported accuracy shows that there is a 95% chance that our accuracy will be between [.9994,1] which is also indicative of our out of sample error.
